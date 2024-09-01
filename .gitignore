@@ -1,0 +1,32 @@
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+*.py[cod]
+
+# Environment files
+.env
+
+# Poetry files
+.poetry/
+poetry.lock
+
+# VSCode files
+.vscode/
+
+# PyCharm files
+.idea/
+
+# OS specific
+.DS_Store
+*.swp
+
+# Static and media files
+staticfiles/
+media/
