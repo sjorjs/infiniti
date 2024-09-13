@@ -1,71 +1,39 @@
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
-
-from accounts.models import OTP, User
-from accounts.serializers import UserRegistrationSerializer, LoginRequestSerializer, OTPSerializer
-from accounts.utils.otp_utils import create_and_send_otp
+from accounts.serializers import RegisterSerializer
+from accounts.models import User
 
 
-class UserRegisterView(APIView):
+class RegisterView(APIView):
     def post(self, request):
-        serializer = UserRegistrationSerializer(data=request.data)
+        serializer = RegisterSerializer(data=request.data)
+
         if serializer.is_valid():
-            serializer.save()
-            return Response({'message': 'User created successfully'}, status=status.HTTP_201_CREATED)
+            user = serializer.save()
+            return Response(
+                {"message": "OTP has been sent to your email."},
+                status=status.HTTP_201_CREATED,
+            )
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class UserLoginView(APIView):
+class VerifyOtpView(APIView):
     def post(self, request):
-        serializer = LoginRequestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        email = request.data.get("email")
+        otp = request.data.get("otp")
 
-        email = serializer.validated_data['email']
-        captcha = serializer.validated_data['captcha']
+        try:
+            # Find the user with the provided email and OTP
+            user = User.objects.get(email=email, otp=otp)
 
-        user = User.objects.filter(email=email).first()
+            # If user is found, proceed with verification (you can add further logic here)
+            return Response(
+                {"message": "OTP verified successfully!"}, status=status.HTTP_200_OK
+            )
 
-        if user is None:
-            return Response({'message': 'Invalid username'}, status=status.HTTP_404_NOT_FOUND)
-
-        create_and_send_otp(user)
-        return Response({'message': 'OTP sent to your email'}, status=status.HTTP_200_OK)
-
-
-class OTPVerificationThrottle(UserRateThrottle):
-    scope = 'otp_verification'
-
-
-class OTPVerifyView(APIView):
-    throttle_classes = [OTPVerificationThrottle]
-
-    def post(self, request):
-        serializer = OTPSerializer(data=request.data)
-
-        if serializer.is_valid():
-            email = serializer.validated_data['email']
-            otp_code = serializer.validated_data['otp_code']
-
-            try:
-                user = User.objects.get(email=email)
-                otp = OTP.objects.get(user=user)
-
-                if not otp.is_valid():
-                    return Response({'error': 'OTP has expired.'}, status=status.HTTP_400_BAD_REQUEST)
-
-                if otp.otp_code == otp_code:
-                    return Response({'message': 'Login Successful'}, status=status.HTTP_200_OK)
-                else:
-                    return Response({'error': 'Invalid OTP.'}, status=status.HTTP_400_BAD_REQUEST)
-
-            except (User.DoesNotExist, OTP.DoesNotExist):
-                return Response({'error': 'Invalid email or OTP.'}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class LogoutView(APIView):
-    def post(self, request):
-        return Response({'message': 'Logout Successfully.'}, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "Invalid OTP or email."}, status=status.HTTP_400_BAD_REQUEST
+            )

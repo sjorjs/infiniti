@@ -1,32 +1,28 @@
 from rest_framework import serializers
-from accounts.models import User, OTP
+from accounts.models import User
+from django.core.mail import send_mail
+
+from accounts.utils.email_utils import send_otp_email
+from accounts.utils.otp_utils import generate_otp
 
 
-class UserRegistrationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+class RegisterSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField()
 
     class Meta:
         model = User
-        fields = ["email", "password", "role"]
+        fields = ["email"]
 
-        def create(self, validated_data):
-            user = User.objects.create_user(
-                email=validated_data["email"],
-                password=validated_data["password"],
-                role=validated_data["role"],
-            )
-            return user
+    def create(self, validated_data):
+        email = validated_data.get("email")
+        otp = generate_otp()
 
+        user = User.objects.create(
+            email=email,
+            otp=otp,
+            is_active=False,  # Set the user as inactive until OTP is verified
+        )
 
-class LoginRequestSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    captcha = serializers.CharField(max_length=6)
+        send_otp_email(user, otp)
 
-
-class OTPSerializer(serializers.ModelSerializer):
-    otp_code = serializers.CharField(max_length=6)
-    email = serializers.EmailField()
-
-    class Meta:
-        model = OTP
-        fields = ["otp_code", "email"]
+        return user
