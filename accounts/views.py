@@ -1,8 +1,7 @@
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from accounts.serializers import RegisterSerializer
-from accounts.models import User
+from accounts.serializers import RegisterSerializer, VerifyOtpSerializer
 
 
 class RegisterView(APIView):
@@ -21,19 +20,11 @@ class RegisterView(APIView):
 
 class VerifyOtpView(APIView):
     def post(self, request):
-        email = request.data.get("email")
-        otp = request.data.get("otp")
+        serializer = VerifyOtpSerializer(data=request.data)
 
-        try:
-            # Find the user with the provided email and OTP
-            user = User.objects.get(email=email, otp=otp)
-
-            # If user is found, proceed with verification (you can add further logic here)
+        if serializer.is_valid():
             return Response(
                 {"message": "OTP verified successfully!"}, status=status.HTTP_200_OK
             )
 
-        except User.DoesNotExist:
-            return Response(
-                {"error": "Invalid OTP or email."}, status=status.HTTP_400_BAD_REQUEST
-            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

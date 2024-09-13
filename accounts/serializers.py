@@ -1,7 +1,5 @@
 from rest_framework import serializers
 from accounts.models import User
-from django.core.mail import send_mail
-
 from accounts.utils.email_utils import send_otp_email
 from accounts.utils.otp_utils import generate_otp
 
@@ -26,3 +24,20 @@ class RegisterSerializer(serializers.ModelSerializer):
         send_otp_email(user, otp)
 
         return user
+
+
+class VerifyOtpSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)
+
+    def validate(self, data):
+        email = data.get("email")
+        otp = data.get("otp")
+
+        try:
+            user = User.objects.get(email=email, otp=otp)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("Invalid OTP or email.")
+
+        data["user"] = user
+        return data
