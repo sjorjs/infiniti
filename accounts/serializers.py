@@ -6,17 +6,24 @@ from accounts.utils.otp_utils import generate_otp
 
 class RegisterSerializer(serializers.ModelSerializer):
     email = serializers.EmailField()
+    role = serializers.CharField(required=False)
 
     class Meta:
         model = User
-        fields = ["email"]
+        fields = ["email", "role"]
 
     def create(self, validated_data):
         email = validated_data.get("email")
+        role = validated_data.get("role")
+
+        if not role and not validated_data.get("is_superuser", False):
+            role = User.NORMAL_USER
+
         otp = generate_otp()
 
         user = User.objects.create(
             email=email,
+            role=role,
             otp=otp,
             is_active=False,  # Set the user as inactive until OTP is verified
         )

@@ -3,7 +3,9 @@ from django.db import models
 
 
 class CustomUserManager(BaseUserManager):
-    def create_user(self, email=None, otp=None, password=None, **extra_fields):
+    def create_user(
+        self, email=None, otp=None, password=None, role=None, **extra_fields
+    ):
         """
         Create and save a regular User with the given email and otp.
         """
@@ -12,6 +14,11 @@ class CustomUserManager(BaseUserManager):
 
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
+
+        if role is None and not extra_fields.get("is_superuser", False):
+            user.role = User.NORMAL_USER
+        else:
+            user.role = role
 
         if otp:  # OTP for regular users
             user.otp = otp
@@ -52,7 +59,13 @@ class User(AbstractUser):
     ]
 
     email = models.EmailField(unique=True)
-    role = models.CharField(choices=ROLE_CHOICES, max_length=10, default=NORMAL_USER)
+    role = models.CharField(
+        choices=ROLE_CHOICES,
+        max_length=10,
+        default=NORMAL_USER,
+        blank=True,
+        null=True,
+    )
     otp = models.CharField(
         max_length=6, null=True, blank=True
     )  # OTP for non-superusers
