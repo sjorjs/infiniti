@@ -1,3 +1,5 @@
+import datetime
+
 from django.core.cache import cache
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -73,6 +75,8 @@ class VerifyLoginOtpSerializer(serializers.Serializer):
         user = User.objects.get(email=email)
 
         token = RefreshToken.for_user(user)
+        user.last_login = datetime.datetime.now()
+        user.save()
         return {"access_token": str(token.access_token), "refresh_token": str(token)}
 
 
